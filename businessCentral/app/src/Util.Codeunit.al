@@ -9,13 +9,13 @@ codeunit 82564 "ADLSE Util"
         AlphabetsUpperTxt: Label 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         NumeralsTxt: Label '1234567890';
         FieldTypeNotSupportedErr: Label 'The field %1 of type %2 is not supported.', Comment = '%1 = field name, %2 = field type';
-        ConcatNameIdTok: Label '%1-%2', Comment = '%1: Name, %2: ID';
-        DateTimeExpandedFormatTok: Label '%1, %2 %3 %4 %5:%6:%7 GMT', Comment = '%1: weekday, %2: day, %3: month, %4: year, %5: hour, %6: minute, %7: second';
-        QuotedTextTok: Label '"%1"', Comment = '%1: text to be double- quoted';
-        CommaPrefixedTok: Label ',%1', Comment = '%1: text to be prefixed';
-        CommaSuffixedTok: Label '%1, ', Comment = '%1: text to be suffixed';
-        WholeSecondsTok: Label ':%1Z', Comment = '%1: seconds';
-        FractionSecondsTok: Label ':%1.%2Z', Comment = '%1: seconds, %2: milliseconds';
+        ConcatNameIdTok: Label '%1-%2', Comment = '%1: Name, %2: ID', Locked = true;
+        DateTimeExpandedFormatTok: Label '%1, %2 %3 %4 %5:%6:%7 GMT', Comment = '%1: weekday, %2: day, %3: month, %4: year, %5: hour, %6: minute, %7: second', Locked = true;
+        QuotedTextTok: Label '"%1"', Comment = '%1: text to be double- quoted', Locked = true;
+        CommaPrefixedTok: Label ',%1', Comment = '%1: text to be prefixed', Locked = true;
+        CommaSuffixedTok: Label '%1, ', Comment = '%1: text to be suffixed', Locked = true;
+        WholeSecondsTok: Label ':%1Z', Comment = '%1: seconds', Locked = true;
+        FractionSecondsTok: Label ':%1.%2Z', Comment = '%1: seconds, %2: milliseconds', Locked = true;
 
     procedure ToText(GuidValue: Guid): Text
     begin
@@ -313,6 +313,7 @@ codeunit 82564 "ADLSE Util"
 
     procedure CreateCsvHeader(RecordRef: RecordRef; FieldIdList: List of [Integer]) RecordPayload: Text
     var
+        ADLSESetup: Record "ADLSE Setup";
         ADLSECDMUtil: Codeunit "ADLSE CDM Util";
         FieldRef: FieldRef;
         FieldID: Integer;
@@ -333,13 +334,18 @@ codeunit 82564 "ADLSE Util"
         end;
         if IsTablePerCompany(RecordRef.Number) then
             Payload.Append(StrSubstNo(CommaPrefixedTok, ADLSECDMUtil.GetCompanyFieldName()));
+        ADLSESetup.GetSingleton();
+        if ADLSESetup."Delivered DateTime" then
+            Payload.Append(StrSubstNo(CommaPrefixedTok, ADLSECDMUtil.GetDeliveredDateTimeFieldName()));
         Payload.AppendLine();
         RecordPayload := Payload.ToText();
     end;
 
     procedure CreateCsvPayload(RecordRef: RecordRef; FieldIdList: List of [Integer]; AddHeaders: Boolean) RecordPayload: Text
     var
+        ADLSESetup: Record "ADLSE Setup";
         FieldRef: FieldRef;
+        CurrDateTime: DateTime;
         FieldID: Integer;
         FieldsAdded: Integer;
         FieldTextValue: Text;
@@ -347,6 +353,10 @@ codeunit 82564 "ADLSE Util"
     begin
         if AddHeaders then
             Payload.Append(CreateCsvHeader(RecordRef, FieldIdList));
+
+        ADLSESetup.GetSingleton();
+        if ADLSESetup."Delivered DateTime" then
+            CurrDateTime := CurrentDateTime();
 
         FieldsAdded := 0;
         foreach FieldID in FieldIdList do begin
@@ -361,6 +371,8 @@ codeunit 82564 "ADLSE Util"
         end;
         if IsTablePerCompany(RecordRef.Number) then
             Payload.Append(StrSubstNo(CommaPrefixedTok, ConvertStringToText(CompanyName())));
+        if ADLSESetup."Delivered DateTime" then
+            Payload.Append(StrSubstNo(CommaPrefixedTok, ConvertDateTimeToText(CurrDateTime)));
         Payload.AppendLine();
 
         RecordPayload := Payload.ToText();

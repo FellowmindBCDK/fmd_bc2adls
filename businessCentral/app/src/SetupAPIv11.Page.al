@@ -13,6 +13,8 @@ page 82568 "ADLSE Setup API v11"
     DeleteAllowed = false;
     ModifyAllowed = false;
     ODataKeyFields = SystemId;
+    ObsoleteState = Pending;
+    ObsoleteReason = 'This API is obsolete. Use the API v1.2 instead.';
 
     layout
     {
@@ -34,7 +36,13 @@ page 82568 "ADLSE Setup API v11"
                 {
                     Editable = false;
                 }
+#pragma warning disable LC0016
                 field(systemRowVersion; Rec.SystemRowVersion)
+                {
+                    Editable = false;
+                }
+#pragma warning restore
+                field(lastModifiedDateTime; Rec.SystemModifiedAt)
                 {
                     Editable = false;
                 }
@@ -75,6 +83,15 @@ page 82568 "ADLSE Setup API v11"
         ADLSEExecution: Codeunit "ADLSE Execution";
     begin
         ADLSEExecution.ClearSchemaExportedOn();
+        SetActionResponse(ActionContext, Rec."SystemId");
+    end;
+
+    [ServiceEnabled]
+    procedure RefreshOptions(var ActionContext: WebServiceActionContext)
+    var
+        ADLSEEnumTranslation: Record "ADLSE Enum Translation";
+    begin
+        ADLSEEnumTranslation.RefreshOptions();
         SetActionResponse(ActionContext, Rec."SystemId");
     end;
 
