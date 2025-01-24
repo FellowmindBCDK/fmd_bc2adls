@@ -56,6 +56,12 @@ table 82561 "ADLSE Table"
             ObsoleteTag = '1.2.2.0';
             ObsoleteState = Removed;
         }
+        field(10; ExportCategory; Code[50])
+        {
+            TableRelation = "ADLSE Export Category Table";
+            DataClassification = CustomerContent;
+            ToolTip = 'Specifies the Export Category which can be linked to tables which are part of the export to Azure Datalake. The Category can be used to schedule the export.';
+        }
     }
 
     keys
@@ -101,9 +107,10 @@ table 82561 "ADLSE Table"
     var
         ADLSESetup: Record "ADLSE Setup";
     begin
-        ADLSESetup.SchemaExported();
-
-        CheckNotExporting();
+        if (Rec."Table ID" <> xRec."Table ID") or (Rec.Enabled <> xRec.Enabled) then begin
+            ADLSESetup.SchemaExported();
+            CheckNotExporting();
+        end;
     end;
 
     var
@@ -134,6 +141,7 @@ table 82561 "ADLSE Table"
         Rec.Enabled := true;
         Rec.Insert(true);
 
+        AddPrimaryKeyFields();
         ADLSEExternalEvents.OnAddTable(Rec);
     end;
 
@@ -275,6 +283,23 @@ table 82561 "ADLSE Table"
             until ADLSEFields.Next() = 0;
     end;
 
+    local procedure AddPrimaryKeyFields()
+    var
+        Field: Record Field;
+        ADLSEField: Record "ADLSE Field";
+    begin
+        Field.SetRange(TableNo, Rec."Table ID");
+        Field.SetRange(IsPartOfPrimaryKey, true);
+        if Field.Findset() then
+            repeat
+                if not ADLSEField.Get(Rec."Table ID", Field."No.") then begin
+                    ADLSEField."Table ID" := Field.TableNo;
+                    ADLSEField."Field ID" := Field."No.";
+                    ADLSEField.Enabled := true;
+                    ADLSEField.Insert();
+                end;
+            until Field.Next() = 0;
+    end;
     [IntegrationEvent(false, false)]
     local procedure OnAfterResetSelected(ADLSETable: Record "ADLSE Table")
     begin
